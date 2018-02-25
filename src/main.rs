@@ -33,8 +33,10 @@ fn main() {
         .ok().expect("Failed to execute find.");
 
     for item in cursor {
-        for (key, value) in item.unwrap() {
-            println!("{:?} -> {:?}", key, value);
+        if let Ok(doc) = item {
+            for (key, value) in doc {
+                println!("{:?} -> {:?}", key, value);
+            }
         }
     }
 }
