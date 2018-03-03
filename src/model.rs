@@ -1,4 +1,5 @@
 use std::fmt;
+use std::slice::Iter;
 use bson;
 use mongodb::{Client, ThreadedClient};
 use mongodb::db::ThreadedDatabase;
@@ -13,6 +14,18 @@ pub enum Format {
     TXT,
     ODG,
     ODT,
+}
+
+impl Format {
+    pub fn variants() -> Vec<Format> {
+        vec![Format::PDF,
+             Format::DOC,
+             Format::DOCX,
+             Format::JPEG,
+             Format::TXT,
+             Format::ODG,
+             Format::ODT]
+    }
 }
 
 impl Default for Format {
