@@ -35,7 +35,7 @@ enum Format {
 
 impl Default for Format {
     fn default() -> Format {
-        Format::PDF
+        Format::TXT
     }
 }
 
@@ -101,6 +101,31 @@ struct Document {
     tags: Vec<String>,
 }
 
+impl Into<bson::Document> for Document {
+    fn into(self) -> bson::Document {
+        // I decided to panic here, since conversion should always work
+        let bson_self: bson::Bson = match bson::to_bson(&self) {
+            Ok(bson) => bson,
+            Err(_)   => panic!("Error in Document -> bson::Bson")
+        };
+
+        match bson_self {
+            bson::Bson::Document(ordered_doc) => ordered_doc,
+            _ => panic!("Invalid bson::Bson enum: not a bson::Document")
+        }
+    }
+}
+
+impl From<bson::Document> for Document {
+    fn from(item: bson::Document) -> Self {
+        let bson_item: bson::Bson = bson::Bson::Document(item);
+        match bson::from_bson(bson_item) {
+            Ok(doc) => doc,
+            Err(_) => panic!("Error in generating document from bson")
+        }
+    }
+}
+
 fn main() {
     let file = File::new("ciao)$%pollo", Format::new("pdf").unwrap()).unwrap();
 
@@ -113,36 +138,42 @@ fn main() {
         .tags(vec!["uno".into(), "due".into()])
         .build()
         .unwrap();
-    println!("{:?}", my_doc);
+    println!("my_doc: {:?}\n\n\n", my_doc);
 
-    let encoded = bson::to_bson(&my_doc).unwrap();
-    println!("{}", encoded);
+    let converted : bson::Document = my_doc.into();
+    println!("converted: {:?}\n\n\n", converted);
 
-    ////////////////////////////////////
+    let back_doc : Document = converted.into();
+    println!("back_doc: {:?}\n\n\n", back_doc);
 
-    let client =
-        Client::connect("localhost", 27017).expect("Failed to initialize standalone client.");
+    // let encoded = bson::to_bson(&my_doc).unwrap();
+    // println!("{}", encoded);
 
-    let coll: mongodb::coll::Collection = client.db("documents").collection("documents");
+    // ////////////////////////////////////
 
-    // remove all entries (empty matches all)
-    // coll.delete_many(doc!{}, None).unwrap();
+    // let client =
+    //     Client::connect("localhost", 27017).expect("Failed to initialize standalone client.");
 
-    if let bson::Bson::Document(document) = encoded {
-        coll.insert_one(document, None).unwrap();
-    } else {
-        println!("Error converting the BSON object into a MongoDB document");
-    }
+    // let coll: mongodb::coll::Collection = client.db("documents").collection("documents");
 
-    // Find the document and receive a cursor
-    let cursor = coll.find(None, None).ok().expect("Failed to execute find.");
+    // // remove all entries (empty matches all)
+    // // coll.delete_many(doc!{}, None).unwrap();
 
-    for item in cursor {
-        if let Ok(doc) = item {
-            println!("\n\n-------->");
-            let bson_doc: bson::Bson = bson::Bson::Document(doc);
-            let deser: Document = bson::from_bson(bson_doc).unwrap();
-            println!("{:?}", deser);
-        }
-    }
+    // if let bson::Bson::Document(document) = encoded {
+    //     coll.insert_one(document, None).unwrap();
+    // } else {
+    //     println!("Error converting the BSON object into a MongoDB document");
+    // }
+
+    // // Find the document and receive a cursor
+    // let cursor = coll.find(None, None).ok().expect("Failed to execute find.");
+
+    // for item in cursor {
+    //     if let Ok(doc) = item {
+    //         println!("\n\n-------->");
+    //         let bson_doc: bson::Bson = bson::Bson::Document(doc);
+    //         let deser: Document = bson::from_bson(bson_doc).unwrap();
+    //         println!("{:?}", deser);
+    //     }
+    // }
 }
