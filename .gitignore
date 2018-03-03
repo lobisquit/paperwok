@@ -1,5 +1,8 @@
 /target/
 **/*.rs.bk
-prova.db
+
+# mongoDB directory
 /data/
+
+# documents directory
 documents/
