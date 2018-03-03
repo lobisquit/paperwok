@@ -90,7 +90,7 @@ impl fmt::Display for File {
     }
 }
 
-#[derive(Default, Debug, Serialize, Deserialize, Builder)]
+#[derive(Default, Debug, Serialize, Deserialize, Builder, Clone)]
 #[builder(setter(into))]
 struct Document {
     title: String,
@@ -108,7 +108,6 @@ impl Into<bson::Document> for Document {
             Ok(bson) => bson,
             Err(_)   => panic!("Error in Document -> bson::Bson")
         };
-
         match bson_self {
             bson::Bson::Document(ordered_doc) => ordered_doc,
             _ => panic!("Invalid bson::Bson enum: not a bson::Document")
@@ -126,11 +125,52 @@ impl From<bson::Document> for Document {
     }
 }
 
+struct Adapter(mongodb::coll::Collection);
+
+impl<'a> Adapter {
+    fn new(name: &'a str) -> Result<Adapter, String> {
+        match Client::connect("localhost", 27017) {
+            Ok(client) => {
+                let coll = client.db("db").collection(name);
+                Ok(Adapter(coll))
+            },
+            Err(_) => Err(format!("Unable to connect to database localhost:27017"))
+        }
+    }
+
+    fn add(&self, document: Document) -> Result<(), String> {
+        match self.0.insert_one(document.into(), None) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(format!("Unable to insert into database"))
+        }
+    }
+
+    fn get_all(&self) -> Result<Vec<Document>, String> {
+        self.get(None)
+    }
+
+    fn get(&self, doc: Option<bson::Document>) -> Result<Vec<Document>, String> {
+        match self.0.find(doc, None).ok() {
+            Some(cursor) => {
+                let mut docs: Vec<Document> = vec![];
+                for item in cursor {
+                    match item {
+                        Ok(doc) => docs.push(doc.into()),
+                        Err(_) => return Err(format!("Error in cursor iteration"))
+                    }
+                }
+                Ok(docs)
+            },
+            None => Err(format!("Unable to fetch from database"))
+        }
+    }
+}
+
 fn main() {
     let file = File::new("ciao)$%pollo", Format::new("pdf").unwrap()).unwrap();
 
     let my_doc = DocumentBuilder::default()
-        .title("Ciao")
+        .title("c")
         .binder("rosso")
         .folder("quella")
         .year(2010)
@@ -138,42 +178,11 @@ fn main() {
         .tags(vec!["uno".into(), "due".into()])
         .build()
         .unwrap();
-    println!("my_doc: {:?}\n\n\n", my_doc);
 
-    let converted : bson::Document = my_doc.into();
-    println!("converted: {:?}\n\n\n", converted);
+    let adapt = Adapter::new("prova").unwrap();
+    adapt.add(my_doc.clone()).unwrap();
 
-    let back_doc : Document = converted.into();
-    println!("back_doc: {:?}\n\n\n", back_doc);
-
-    // let encoded = bson::to_bson(&my_doc).unwrap();
-    // println!("{}", encoded);
-
-    // ////////////////////////////////////
-
-    // let client =
-    //     Client::connect("localhost", 27017).expect("Failed to initialize standalone client.");
-
-    // let coll: mongodb::coll::Collection = client.db("documents").collection("documents");
-
-    // // remove all entries (empty matches all)
-    // // coll.delete_many(doc!{}, None).unwrap();
-
-    // if let bson::Bson::Document(document) = encoded {
-    //     coll.insert_one(document, None).unwrap();
-    // } else {
-    //     println!("Error converting the BSON object into a MongoDB document");
-    // }
-
-    // // Find the document and receive a cursor
-    // let cursor = coll.find(None, None).ok().expect("Failed to execute find.");
-
-    // for item in cursor {
-    //     if let Ok(doc) = item {
-    //         println!("\n\n-------->");
-    //         let bson_doc: bson::Bson = bson::Bson::Document(doc);
-    //         let deser: Document = bson::from_bson(bson_doc).unwrap();
-    //         println!("{:?}", deser);
-    //     }
-    // }
+    for doc in &adapt.get(Some(doc!["title" => "c"])).unwrap() {
+        println!("doc: {:?}", doc);
+    }
 }
