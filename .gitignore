@@ -6,3 +6,9 @@
 
 # documents directory
 documents/
+
+# elm
+elm-stuff/
+
+# output html
+website/

@@ -33,7 +33,7 @@ mod dbutils;
 use model::{File, Format, Document, DocumentBuilder};
 use dbutils::Adapter;
 
-#[get("/all_docs")]
+#[get("/api/all_docs")]
 fn all_docs() -> String {
     let adapter = match Adapter::new("documents") {
         Ok(adapt) => adapt,
@@ -49,7 +49,7 @@ fn all_docs() -> String {
     }
 }
 
-#[get("/formats")]
+#[get("/api/formats")]
 fn formats() -> String {
     match serde_json::to_string(&Format::variants()) {
         Ok(string) => string,
@@ -62,10 +62,29 @@ fn documents(file: PathBuf) -> Result<NamedFile, io::Error> {
     NamedFile::open(Path::new("documents/").join(file))
 }
 
+#[get("/<file>")]
+fn web(file: String) -> Option<NamedFile> {
+    if file.ends_with(".html") {
+        NamedFile::open(Path::new("website/").join(file)).ok()
+    }
+    else {
+        println!("    ====> DEBUG: file not found \"{}\"", file);
+        None
+    }
+}
+
+#[get("/")]
+fn root() -> Option<NamedFile> {
+    web("index.html".into())
+}
+
 fn main() {
     rocket::ignite()
         .mount("/", routes![all_docs,
                             formats,
-                            documents])
+                            web,
+                            root,
+                            documents
+        ])
         .launch();
 }

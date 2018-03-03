@@ -1,7 +1,7 @@
 {
     "version": "0.0.1",
     "summary": "Order personal documents",
-    "repository": "https://github.com/lobisquit/paperwok",
+    "repository": "https://github.com/lobisquit/paperwok.git",
     "license": "GPL3",
     "source-directories": [
         "."
