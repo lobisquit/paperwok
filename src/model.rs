@@ -35,8 +35,9 @@ impl Default for Format {
 }
 
 impl<'a> Format {
-    pub fn new(name: &'a str) -> Result<Format, String> {
-        match name {
+    pub fn new<T: Into<String>>(name: T) -> Result<Format, String> {
+        let name_string: String = name.into();
+        match name_string.as_ref() {
             "PDF"  | "pdf"  => Ok(Format::PDF),
             "DOC"  | "doc"  => Ok(Format::DOC),
             "DOCX" | "docx" => Ok(Format::DOCX),
@@ -44,7 +45,7 @@ impl<'a> Format {
             "TXT"  | "txt"  => Ok(Format::TXT),
             "ODG"  | "odg"  => Ok(Format::ODG),
             "ODT"  | "odt"  => Ok(Format::ODT),
-            _ => Err(format!("Unsupported format: {}", name)),
+            _ => Err(format!("Unsupported format: {}", name_string)),
         }
     }
 }
@@ -71,10 +72,7 @@ impl<'a> File {
 
         match fixed_name.as_ref() {
             "" => Err(format!("Invalid file name '{}'", path)),
-            _ => Ok(File {
-                path: fixed_name,
-                format: format,
-            }),
+            _  => Ok(File { path: fixed_name, format: format })
         }
     }
 }
