@@ -27,6 +27,13 @@ impl<'a> Adapter {
         }
     }
 
+    pub fn del(&self, doc: bson::Document) -> Result<(), String> {
+        match self.0.delete_many(doc, None) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(format!("Unable to delete from database"))
+        }
+    }
+
     pub fn get_all(&self) -> Result<Vec<Document>, String> {
         self.get(None)
     }
